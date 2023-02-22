@@ -1,3 +1,5 @@
+const mongoose = require("mongoose");
+
 const isValidRequestBody = function(requestBody){
     if(Object.keys(requestBody).length>0)return true
     return false
@@ -14,4 +16,8 @@ const isValidPassword = function (password) {
   return false
 }
 
-module.exports = { isValidRequestBody , isValidEmail, isValidPassword};
+const isValidObjectId = function (objectId) {
+    return mongoose.Types.ObjectId.isValid(objectId)
+}
+
+module.exports = { isValidRequestBody , isValidEmail, isValidPassword , isValidObjectId};

@@ -22,7 +22,23 @@ const userSchema = new mongoose.Schema({
         type:String,
         required:true,
         unique:true
-    }
+    },
+    followersCount :  {
+        type : Number,
+        default : 0
+    },
+    followingCount : {
+        type : Number,
+        default : 0
+    },
+    followersList : {
+        type : Array,
+        default : []
+    },
+    followingList : {
+        type : Array,
+        default : []
+    },
 },{timestamps:true});
 
 module.exports = mongoose.model("user", userSchema);

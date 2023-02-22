@@ -1,7 +1,8 @@
-const userModel = require("../models/usermodel");
+const userModel = require("../models/userModel");
+const postModel = require("../models/postModel");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { isValidRequestBody ,isValidEmail, isValidPassword}= require("../validators/validation")
+const { isValidRequestBody ,isValidEmail, isValidPassword , isValidObjectId}= require("../validators/validation");
 
 //==========================create user ========================================
 
@@ -72,5 +73,191 @@ const userLogin = async function (req,res){
     }
 }
 
-module.exports = { createUser , userLogin};
+
+//==================following a user===========================
+
+const followUser = async function (req,res){
+    try{
+        let userId = req.params.userId;
+        let personToFollow = req.body.userId
+
+        const user = await userModel.findOne({_id:userId});
+        if(!user) return res.status(404).send({status:false,message:"user doesn't exist"});
+
+        if(!personToFollow) return res.status(400).send({status:false,message:"Please give userId to follow person"});
+
+        if(!isValidObjectId(personToFollow)) return res.status(400).send({status:false,message:"please give valid id in the body"});
+
+        if(userId == personToFollow) return res.status(400).send({status:false,message:"you cannot follow yourself"});
+
+        const bodyUser = await userModel.findOne({_id:personToFollow});
+        if(!bodyUser) return res.status(404).send({status:false,message:"user you want to follow doesn't exist"});
+
+        let updated = {}
+
+        let followerList = bodyUser.followersList
+
+        let newFollower = {}
+        newFollower["_id"] = user["_id"]
+        newFollower["userName"] = user["userName"]
+        newFollower["Name"] = user["Name"]
+
+        followerList.push(newFollower)
+        updated["followersList"]= followerList
+
+        updated["followersCount"] = bodyUser.followersCount + 1;
+
+        let update1 = await userModel.findOneAndUpdate({_id:personToFollow},updated)
+         
+        let updated2 = {}
+
+        let FollowingList = bodyUser.followingList
+        let newFollowing = {}
+
+        newFollowing["_id"] = bodyUser["_id"]
+        newFollowing["userName"] = bodyUser["userName"]
+        newFollowing["Name"] = bodyUser["Name"]
+
+        FollowingList.push(newFollowing)
+
+        updated2["followingList"] = FollowingList
+        updated2["followingCount"] = user.followingCount + 1 
+
+        let update2 = await userModel.findOneAndUpdat({_id:user},updated2)
+
+        return res.status(200).send({status:true,message:`Now following ${bodyUser.userName}.`})
+    }
+    catch(err){
+        return res.status(500).send({status :false, message:err.message})
+    }
+}
+
+//======================unfollowing a user=========================
+
+const unFollowUser = async function(req,res){
+    try{
+        let userId = req.params.userId;
+        let personToUnfollow = req.body.userId
+
+        const user = await userModel.findOne({_id:userId});
+        if(!user) return res.status(404).send({status:false,message:"user doesn't exist"});
+
+        if(!personToUnfollow) return res.status(400).send({status:false,message:"Please give userId to unfollow person"});
+
+        if(!isValidObjectId(personToUnfollow)) return res.status(400).send({status:false,message:"please give valid id in the body"});
+
+        if(userId == personToUnfollow) return res.status(400).send({status:false,message:"you cannot unfollow yourself"});
+
+        const bodyUser = await userModel.findOne({_id:personToUnfollow});
+        if(!bodyUser) return res.status(404).send({status:false,message:"user you want to unfollow doesn't exist"});
+
+
+        let followerList = bodyUser.followersList
+        for(let i = 0;i<followerList.length;i++){
+            if(followerList[i].userName == user.userName){
+                followerList.splice(i,1)
+                let followerCount = bodyUser.followersCount - 1
+                let updated = await userModel.findByIdAndUpdate({_id:personToUnfollow}, {followersList:followerList,followersCount:followerCount})
+                break;
+            }
+        }
+
+        let FollowingList = user.followingList
+        for(let i =0;i<FollowingList.length ;i++){
+            if(FollowingList[i].userName == bodyUser.userName){
+                FollowingList.splice(i, 1)
+                let FollowingCount = user.followingCount - 1 
+                let updated2 = await userModel.findOneAndUpdate({_id : user}, { followingList: FollowingList, followingCount : FollowingCount})
+            }
+        }
+
+        return res.status(200).send({status:true,message:`you have unfollowed ${bodyUser.userName}.`})
+
+    }
+    catch(err){
+        return res.status(500).send({status :false, message:err.message})
+    }
+}
+
+//====================get users follower and following details =========================
+
+const userDetails = async function (req,res){
+    try{
+        let userId = req.params.userId ;
+
+        const details = await userModel.findOne({_id:userId}).select({followersList:1,followingList:1,_id:0})
+        return res.stattus(200).send({status:true,message:"user details",data:details})
+    }
+    catch(err){
+        return res.status(500).send({status :false, message:err.message})
+    }
+}
+
+//===================Comment on the post======================================
+
+const commentOnPost = async function (req,res){
+    try{
+        let userId = req.params.userId;
+        let data = req.body;
+        let {postId, comment } = data
+
+        if(!isValidRequestBody(data)) return res.status(400).send({status:false,message:" Please give some data"})
+        
+        const user = await userModel.findOne({_id:userId});
+        if(!user) return res.status(404).send({status:false,message:"user doesn't exist"});
+
+        if(!postId) return res.status(400).send({status:false,message:"Please provide postId "})
+        if(!isValidObjectId(postId)) return res.status(400).send({status:false,message:"please give valid id in the body"});
+        const postCheck = await postModel.findOne({_id:postId , isDeleted :false});
+        if(!postCheck) return res.status(404).send({status:false,message:"post doesn't exist"});
+
+        if(!comment) return res.status(400).send({status:false,message:"Please provide comment "})
+
+        let CommentsCount = postCheck.commentsCount + 1
+        let CommentsList = postCheck.commentsList
+
+        let obj = {}
+        obj["userName"] = user.userName
+        obj["Comment"] = comment
+        CommentsList.push(obj)
+
+        let updating = await postModel.findOneAndUpdate({_id:postId},{ commentsCount:CommentsCount, commentsList:CommentsList},{ new:true })
+        return res.status(200).send({status:true,message:"Commented on the post",data:updating})
+    }
+    catch(err){
+        return res.status(500).send({status :false, message:err.message})
+    }
+}
+
+//==============================Like a post==================================
+
+const likePost = async function(req,res){
+    try{
+        let userId = req.params.userId;
+        let postId = req.body.postId;
+
+        const user = await userModel.findOne({_id:userId});
+        if(!user) return res.status(404).send({status:false,message:"user doesn't exist"});
+
+        if(!postId) return res.status(400).send({status:false,message:"Please provide postId "})
+        if(!isValidObjectId(postId)) return res.status(400).send({status:false,message:"please give valid id in the body"});
+        const postCheck = await postModel.findOne({_id:postId , isDeleted :false});
+        if(!postCheck) return res.status(404).send({status:false,message:"post doesn't exist"});
+
+        let likesList = postCheck.likesList
+        
+        let newLike = {}
+        newLike.userName = user.userName
+        likesList.push(newLike)
+        let likesCount = postCheck.likesCount + 1
+
+        let updateLikeList = await postModel.findOneAndUpdate({_id:postId},{ likesList:likesList, likesCount:likesCount}, { new:true });
+        return res.status(200).send({status:true,message:" liked a post ",data:updateLikeList})
+    }
+    catch(err){
+        return res.status(500).send({status :false, message:err.message})
+    }
+}
+
+module.exports = { createUser , userLogin , followUser , unFollowUser , userDetails , commentOnPost , likePost};
  
