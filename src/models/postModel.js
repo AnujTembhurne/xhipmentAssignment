@@ -3,43 +3,38 @@ const ObjectId = mongoose.Schema.Types.ObjectId;
 
 
 const postSchema = new mongoose.Schema({
-    userId : {
-        type:ObjectId,
-        ref:"user",
-        required : true
+    image: {
+        type: String,
+        required: true
     },
-    image : {
-        type:String,
-        required :true
+    caption: {
+        type: String
     },
-    caption:{
-        type:String
+    likesCount: {
+        type: Number,
+        default: 0
     },
-    likesCount:{
-        type:Number,
-        default:0
+    likesList: {
+        type: Array,
+        default: []
     },
-    likesList:{
-        type:Array,
-        default:[]
+    commentsCount: {
+        type: Number,
+        default: 0
     },
-    commentsCount:{
-        type:Number,
-        default:0
+    commentsList: {
+        type: Array,
+        default: []
     },
-    commentsList:{
-        type:Array,
-        default:[]
+    isDeleted: {
+        type: Boolean,
+        default: false
     },
-    isdeleted:{
-        type:Boolean,
-        default:false
-    },
-    deletedAt :{
-        type:Date,
-        default:null
+    deletedAt: {
+        type: Date,
+        default: null
     }
 
-},{timestamps:true});
+}, { timestamps: true });
 
 module.exports = mongoose.model("post", postSchema);
