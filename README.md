@@ -56,5 +56,5 @@ Through this api , user is able to view posts of other users . Here also there a
 
 Here I have written the code for authentication and authorization . Here used jsonwebtoken for authentication . And this middlewwares are applied on many api's mentioned above which authenticates the code . 
 
-### Thank you giving time to read this .
+### Thank you for giving time to read this . I hope it gives good idea about the project . 
 
